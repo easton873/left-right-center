@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Left, Right, Center</title>
+<style>
+  :root {
+    --bg: #2b1238; --bg2: #4a1a63; --card: #fffaf0; --ink: #25182e;
+    --chip: #2a5bd7; --chip-edge: #1b3f9e; --accent: #c0392b; --gold: #f5c542;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #fff; background: radial-gradient(circle at 50% 30%, var(--bg2), var(--bg) 70%) fixed;
+    display: flex; flex-direction: column; align-items: center; padding: 12px 16px 24px;
+  }
+  h1 { margin: 6px 0 2px; font-size: 1.6rem; letter-spacing: .5px; }
+  .sub { margin: 0 0 8px; opacity: .8; font-size: .9rem; }
+  .screen { width: 100%; max-width: 760px; }
+  .hidden { display: none !important; }
+
+  /* setup */
+  .panel { background: rgba(255,255,255,.1); border-radius: 16px; padding: 20px; margin: 12px auto; max-width: 480px; }
+  .panel label { display: block; margin: 12px 0 6px; font-weight: 600; }
+  .panel input[type=range] { width: 100%; }
+  .panel input[type=text] { width: 100%; padding: 8px 10px; border-radius: 8px; border: 0; font-size: 1rem; }
+  .rules { font-size: .9rem; line-height: 1.45; opacity: .92; }
+  .rules li { margin: 2px 0; }
+  button {
+    font: inherit; font-weight: 700; cursor: pointer; border: 0; border-radius: 999px;
+    padding: 12px 26px; background: var(--gold); color: #3a2400; box-shadow: 0 3px 0 #b8901a;
+  }
+  button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #b8901a; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.secondary { background: #fff3; color: #fff; box-shadow: none; }
+  .center-row { text-align: center; margin-top: 16px; }
+
+  /* table */
+  .table {
+    position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: 70vh; margin: 0 auto;
+    background: radial-gradient(circle, #1f7a4a, #145a35); border: 6px solid #6b3f1d; border-radius: 50%;
+    box-shadow: inset 0 0 40px #0006, 0 8px 24px #0008;
+  }
+  .player {
+    position: absolute; transform: translate(-50%, -50%); text-align: center; width: 24%; min-width: 74px;
+    padding: 6px 4px; border-radius: 12px; background: #0005; border: 2px solid transparent;
+    transition: border-color .2s, background .2s, opacity .3s;
+  }
+  .player.active { border-color: var(--gold); background: #0008; box-shadow: 0 0 14px var(--gold); }
+  .player.out { opacity: .45; }
+  .player.winner { border-color: var(--gold); background: #5a4300cc; opacity: 1; }
+  .player .name { font-weight: 700; font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .player .count { font-size: .75rem; opacity: .85; }
+  .player .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; min-height: 18px; margin-top: 3px; }
+  .chip {
+    width: 16px; height: 16px; border-radius: 50%; background: var(--chip);
+    border: 2px solid var(--chip-edge); box-shadow: inset 0 0 0 2px #ffffff30;
+  }
+  .player.bump { animation: bump .5s; }
+  @keyframes bump { 30% { transform: translate(-50%, -50%) scale(1.12); } }
+
+  .middle {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 44%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .pot { font-size: .8rem; opacity: .9; }
+  .pot .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; max-width: 120px; margin: 2px auto 0; }
+  .dice { display: flex; gap: 8px; justify-content: center; min-height: 54px; }
+  .die {
+    width: 50px; height: 50px; border-radius: 10px; background: #fff; color: #111;
+    display: grid; place-items: center; font-size: 1.9rem; font-weight: 800; box-shadow: 0 3px 0 #bbb, 0 4px 8px #0006;
+  }
+  .die.L { color: #1f4fd6; } .die.C { color: #d12b2b; } .die.R { color: #111; }
+  .die.dot { font-size: 2.2rem; line-height: 1; }
+  .die.rolling { animation: shake .12s infinite; }
+  @keyframes shake { 0% { transform: rotate(-12deg) } 50% { transform: rotate(12deg) translateY(-3px) } 100% { transform: rotate(-12deg) } }
+
+  .status { text-align: center; min-height: 1.5em; margin: 12px 0 8px; font-size: 1.05rem; font-weight: 600; }
+  .log {
+    background: rgba(0,0,0,.3); border-radius: 12px; padding: 8px 12px; height: 140px; overflow-y: auto;
+    font-size: .85rem; line-height: 1.4;
+  }
+  .log div { padding: 1px 0; } .log .sep { opacity: .55; }
+  .toolbar { display: flex; gap: 10px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
+  .toolbar label { display: flex; align-items: center; gap: 6px; font-size: .85rem; }
+  .legend { font-size: .8rem; opacity: .8; text-align: center; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <h1>🎲 Left, Right, Center</h1>
+  <p class="sub">The classic dice game — you versus the computer.</p>
+
+  <div id="setup" class="screen">
+    <div class="panel">
+      <label for="name">Your name</label>
+      <input id="name" type="text" maxlength="14" value="You" autocomplete="off">
+      <label for="num">Computer players: <span id="numVal">3</span></label>
+      <input id="num" type="range" min="1" max="7" value="3">
+      <label for="tokens">Starting tokens each: <span id="tokVal">3</span></label>
+      <input id="tokens" type="range" min="3" max="6" value="3">
+      <div class="center-row"><button id="start">Start game</button></div>
+    </div>
+    <div class="panel rules">
+      <strong>How to play</strong>
+      <ul>
+        <li>Everyone starts with 3 tokens. Turns go clockwise.</li>
+        <li>On your turn, roll one die per token you hold (max 3).</li>
+        <li><b>L</b>: pass a token to the player on your left.</li>
+        <li><b>R</b>: pass a token to the player on your right.</li>
+        <li><b>C</b>: put a token in the center (out of the game).</li>
+        <li><b>Dot</b>: keep the token.</li>
+        <li>Players with no tokens skip their turn, but can get tokens passed back to them.</li>
+        <li>The last player holding tokens wins!</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="game" class="screen hidden">
+    <div class="table" id="table">
+      <div class="middle">
+        <div class="dice" id="dice"></div>
+        <div class="pot">Center pot: <b id="potCount">0</b><div class="chips" id="potChips"></div></div>
+      </div>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="toolbar">
+      <button id="roll">Roll dice</button>
+      <button id="again" class="secondary hidden">Play again</button>
+      <button id="menu" class="secondary">New setup</button>
+    </div>
+    <div class="toolbar"><label><input type="checkbox" id="fast"> Fast computer turns</label></div>
+    <div class="log" id="log"></div>
+    <div class="legend">Clockwise seating: <b>L</b> passes to the next player clockwise, <b>R</b> to the previous one.</div>
+  </div>
+
+<script>
+(() => {
+  const FACES = ['L', 'R', 'C', '•', '•', '•'];
+  const $ = id => document.getElementById(id);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const CPU_NAMES = ['Ada', 'Bo', 'Cleo', 'Dex', 'Eli', 'Fay', 'Gus'];
+
+  let players = [], pot = 0, turn = 0, busy = false, gameId = 0, config = null;
+
+  $('num').oninput = e => $('numVal').textContent = e.target.value;
+  $('tokens').oninput = e => $('tokVal').textContent = e.target.value;
+  $('start').onclick = () => {
+    config = {
+      name: $('name').value.trim() || 'You',
+      cpus: +$('num').value,
+      tokens: +$('tokens').value
+    };
+    startGame();
+  };
+  $('again').onclick = () => startGame();
+  $('menu').onclick = () => {
+    gameId++; $('game').classList.add('hidden'); $('setup').classList.remove('hidden');
+  };
+  $('roll').onclick = () => { if (!busy && players[turn]?.human) takeTurn(); };
+
+  function startGame() {
+    gameId++;
+    players = [{ name: config.name, human: true, tokens: config.tokens }];
+    for (let i = 0; i < config.cpus; i++) players.push({ name: CPU_NAMES[i], human: false, tokens: config.tokens });
+    pot = 0; turn = 0; busy = false;
+    $('setup').classList.add('hidden'); $('game').classList.remove('hidden');
+    $('again').classList.add('hidden'); $('dice').innerHTML = ''; $('log').innerHTML = '';
+    buildTable(); render();
+    log(`Game on! ${players.length} players, ${config.tokens} tokens each.`);
+    nextTurn();
+  }
+
+  function buildTable() {
+    document.querySelectorAll('.player').forEach(n => n.remove());
+    const n = players.length;
+    players.forEach((p, i) => {
+      const a = (Math.PI / 2) + i * 2 * Math.PI / n;   // human at bottom, clockwise on screen
+      const el = document.createElement('div');
+      el.className = 'player'; el.id = 'p' + i;
+      el.style.left = (50 + 38 * Math.cos(a)) + '%';
+      el.style.top = (50 + 38 * Math.sin(a)) + '%';
+      el.innerHTML = '<div class="name"></div><div class="count"></div><div class="chips"></div>';
+      $('table').appendChild(el);
+    });
+  }
+
+  function render() {
+    players.forEach((p, i) => {
+      const el = $('p' + i);
+      el.querySelector('.name').textContent = p.name + (p.human ? ' ★' : '');
+      el.querySelector('.count').textContent = p.tokens + (p.tokens === 1 ? ' token' : ' tokens');
+      el.querySelector('.chips').innerHTML = '<span class="chip"></span>'.repeat(Math.min(p.tokens, 12));
+      el.classList.toggle('out', p.tokens === 0);
+      el.classList.toggle('active', i === turn && !isOver());
+    });
+    $('potCount').textContent = pot;
+    $('potChips').innerHTML = '<span class="chip"></span>'.repeat(Math.min(pot, 40));
+  }
+
+  function bump(i) {
+    const el = $('p' + i); el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+  }
+
+  const alive = () => players.filter(p => p.tokens > 0);
+  const isOver = () => alive().length <= 1;
+  const n = () => players.length;
+  const log = (msg, cls) => {
+    const d = document.createElement('div'); d.textContent = msg; if (cls) d.className = cls;
+    $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight;
+  };
+  const delay = ms => sleep($('fast').checked ? ms / 5 : ms);
+
+  async function nextTurn() {
+    const id = gameId;
+    // skip players without tokens
+    let guard = 0;
+    while (players[turn].tokens === 0 && guard++ < n()) {
+      log(`${players[turn].name} has no tokens — passes.`, 'sep');
+      turn = (turn + 1) % n();
+    }
+    render();
+    const p = players[turn];
+    if (p.human) {
+      $('status').textContent = `Your turn, ${p.name}! Roll ${Math.min(3, p.tokens)} ${Math.min(3, p.tokens) === 1 ? 'die' : 'dice'}.`;
+      $('roll').disabled = false;
+    } else {
+      $('roll').disabled = true;
+      $('status').textContent = `${p.name} is rolling…`;
+      await delay(900);
+      if (id !== gameId) return;
+      takeTurn();
+    }
+  }
+
+  async function takeTurn() {
+    const id = gameId;
+    busy = true; $('roll').disabled = true;
+    const p = players[turn];
+    const count = Math.min(3, p.tokens);
+    const rolls = Array.from({ length: count }, () => FACES[Math.floor(Math.random() * 6)]);
+
+    // animate
+    const diceEl = $('dice'); diceEl.innerHTML = '';
+    const els = rolls.map(() => { const d = document.createElement('div'); d.className = 'die rolling'; d.textContent = '?'; diceEl.appendChild(d); return d; });
+    for (let t = 0; t < 6; t++) {
+      els.forEach(d => { const f = FACES[Math.floor(Math.random() * 6)]; d.textContent = f; });
+      await delay(90);
+      if (id !== gameId) return;
+    }
+    els.forEach((d, i) => {
+      d.classList.remove('rolling'); d.textContent = rolls[i];
+      d.classList.add(rolls[i] === '•' ? 'dot' : rolls[i]);
+    });
+
+    // apply
+    const left = (turn + 1) % n(), right = (turn - 1 + n()) % n();
+    const summary = { L: 0, R: 0, C: 0, keep: 0 };
+    rolls.forEach(r => {
+      if (r === 'L') { p.tokens--; players[left].tokens++; summary.L++; }
+      else if (r === 'R') { p.tokens--; players[right].tokens++; summary.R++; }
+      else if (r === 'C') { p.tokens--; pot++; summary.C++; }
+      else summary.keep++;
+    });
+    const parts = [];
+    if (summary.L) parts.push(`${summary.L} left to ${players[left].name}`);
+    if (summary.R) parts.push(`${summary.R} right to ${players[right].name}`);
+    if (summary.C) parts.push(`${summary.C} to the center`);
+    if (summary.keep) parts.push(`kept ${summary.keep}`);
+    log(`${p.name} rolled ${rolls.join(' ')} → ${parts.join(', ')}.`);
+    render();
+    if (summary.L) bump(left);
+    if (summary.R) bump(right);
+    await delay(1100);
+    if (id !== gameId) return;
+
+    busy = false;
+    if (isOver()) return finish();
+    turn = (turn + 1) % n();
+    nextTurn();
+  }
+
+  function finish() {
+    const wi = players.findIndex(p => p.tokens > 0);
+    const w = players[wi];
+    render();
+    $('p' + wi).classList.add('winner');
+    $('status').textContent = w.human ? `🏆 You win, ${w.name}!` : `🏆 ${w.name} wins this one!`;
+    log(`${w.name} wins with ${w.tokens} token${w.tokens === 1 ? '' : 's'}!`);
+    $('roll').disabled = true; $('again').classList.remove('hidden');
+  }
+})();
+</script>
+</body>
+</html>
